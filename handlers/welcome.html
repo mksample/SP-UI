@@ -1,0 +1,53 @@
+{{define "body"}}
+<div class="container-fluid">
+  <div class="app-container welcome">
+    <div class="card">
+      <h2 class="typography-h2 card-title">Welcome to Ory!</h2>
+      <p class="typography-paragraph">
+        Welcome to the Ory Managed UI. This UI implements a run-of-the-mill user interface for all
+        self-service flows (login, registration, recovery, verification, settings). The purpose of this
+        UI is to help you get started quickly. In the long run, you probably want to implement your own
+        custom user interface.
+      </p>
+      <div class="row">
+        <div class="col-md-4 col-xs-12">
+          <div class="box">
+            <h2 class="typography-h3">Documentation</h2>
+            <p class="typography-paragraph">
+              Here are some useful documentation pieces that help you get started.
+            </p>
+            <div class="row">
+              {{template "ui_docs_button" dict "TestId" "get-started" "Href" "https://www.ory.sh/docs/guides/protect-page-login" "Label" "Get Started"}}
+              {{template "ui_docs_button" dict "TestId" "user-flows" "Href" "https://www.ory.sh/docs/concepts/self-service" "Label" "User Flows"}}
+              {{template "ui_docs_button" dict "TestId" "identities" "Href" "https://www.ory.sh/docs/concepts/identity" "Label" "Identities"}}
+              {{template "ui_docs_button" dict "TestId" "sessions" "Href" "https://www.ory.sh/docs/concepts/session" "Label" "Sessions"}}
+              {{template "ui_docs_button" dict "TestId" "customize-ui" "Href" "https://www.ory.sh/docs/guides/bring-your-user-interface" "Label" "Bring Your Own UI"}}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8 col-xs-12">
+          <div class="box">
+            <h2 class="typography-h3">Session Information</h2>
+            <p class="typography-paragraph">
+              Below you will find the decoded Ory Session if you are logged in.
+            </p>
+            <pre class="code-box"><code>{{.session}}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="typography-h2">Other User Interface Screens</h2>
+      <div class="row">
+        {{template "ui_screen_button" dict "TestId" "login" "Link" "login" "Label" "Sign In" "Disabled" .hasSession}}
+        {{template "ui_screen_button" dict "TestId" "sign-up" "Link" "registration" "Label" "Sign Up" "Disabled" .hasSession}}
+        {{template "ui_screen_button" dict "TestId" "recover-account" "Link" "recovery" "Label" "Recover Account" "Disabled" .hasSession}}
+        {{template "ui_screen_button" dict "TestId" "verify-account" "Link" "verification" "Label" "Verify Account"}}
+        {{template "ui_screen_button" dict "TestId" "account-settings" "Link" "settings" "Label" "Account Settings" "Disabled" (not .hasSession)}}
+        {{template "ui_screen_button" dict "TestId" "logout" "Href" .logoutUrl "Label" "Logout" "Disabled" (not .hasSession)}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

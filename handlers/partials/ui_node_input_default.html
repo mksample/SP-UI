@@ -1,0 +1,24 @@
+{{define "ui_node_input_default"}}
+<fieldset
+  class="text-input-fieldset"
+  data-testid="node/input/{{.Attributes.UiNodeInputAttributes.Name}}">
+  <label>
+    <span class="typography-h3">{{getNodeLabel .}}{{if .Attributes.UiNodeInputAttributes.Required}}
+      <span class="required-indicator">*</span>{{end}}
+    </span>
+    <input
+      class="text-input"
+      name="{{.Attributes.UiNodeInputAttributes.Name}}"
+      type="{{.Attributes.UiNodeInputAttributes.Type}}"
+      value="{{.Attributes.UiNodeInputAttributes.Value}}"
+      placeholder="{{getNodeLabel .}}"
+      {{if .Attributes.UiNodeInputAttributes.Disabled}}disabled{{end}}
+    />
+  </label>
+  {{if .Messages}}
+    <div class="typography-caption">
+        {{template "messages" dict "Messages" .Messages "ClassName" ""}}
+    </div>
+  {{end}}
+</fieldset>
+{{ end }}

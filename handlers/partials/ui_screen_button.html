@@ -1,0 +1,23 @@
+{{define "ui_screen_button"}}
+<div class="col-xs-4">
+  <div class="box">
+    <div class="input-button">
+      <a class="button"
+         data-testid="{{.TestId}}"
+        {{if .Disabled}}
+         aria-disabled="true"
+         onclick="return false"
+        {{else}}
+         aria-disabled="false"
+           {{if .Link}}
+         href="{{.Link}}"
+           {{else}}
+         href="{{.Href}}"
+           {{end}}
+        {{end}}
+      >{{.Label}}
+      </a>
+    </div>
+  </div>
+</div>
+{{end}}

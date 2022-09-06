@@ -5,11 +5,7 @@ WORKDIR /go/src/github.com/davidoram/kratos-selfservice-ui-go
 
 ADD . .
 
-RUN make clean build-css
-
-ADD . .
-
-FROM golang:1.16 AS gobuilder
+FROM golang:1.19 AS gobuilder
 
 WORKDIR /go/src/github.com/davidoram/kratos-selfservice-ui-go
 

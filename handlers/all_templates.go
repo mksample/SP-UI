@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/benbjohnson/hashfs"
+	kratos "github.com/ory/kratos-client-go"
 )
 
 // Each HTML file has an associated variable that is populated
@@ -20,29 +21,47 @@ var (
 	//
 	//go:embed layout.html
 	layoutTemplate string
-	//go:embed navbar.html
-	navbarTemplate string
-	//go:embed common_stimulus.html
-	commonStimulusTemplate string
-	//go:embed page_heading.html
-	pageHeadingTemplate string
+	//go:embed partials/messages.html
+	messagesTemplate string
+	//go:embed partials/ui_nodes.html
+	uiNodesTemplate string
+	//go:embed partials/ui_node_text.html
+	uiNodeTextTemplate string
+	//go:embed partials/ui_node_script.html
+	uiNodeScriptTemplate string
+	//go:embed partials/ui_node_input_hidden.html
+	uiNodeInputHiddenTemplate string
+	//go:embed partials/ui_node_input_default.html
+	uiNodeInputDefaultTemplate string
+	//go:embed partials/ui_node_input_checkbox.html
+	uiNodeInputCheckboxTemplate string
+	//go:embed partials/ui_node_input_button.html
+	uiNodeInputButtonTemplate string
+	//go:embed partials/ui_node_image.html
+	uiNodeImageTemplate string
+	//go:embed partials/ui_node_anchor.html
+	uiNodeAnchorTemplate string
+	//go:embed partials/ui_docs_button.html
+	uiDocsButtonTemplate string
+	//go:embed partials/fork_me.html
+	forkMeTemplate string
 
 	// Template per page
 	//
-	//go:embed home.html
-	homeTemplate string
-	//go:embed dashboard.html
-	dashboardTemplate string
 	//go:embed login.html
 	loginTemplate string
-	//go:embed logout.html
-	logoutTemplate string
 	//go:embed recovery.html
 	recoveryTemplate string
 	//go:embed registration.html
 	registrationTemplate string
 	//go:embed settings.html
 	settingsTemplate string
+	//go:embed verification.html
+	verificationTemplate string
+	//go:embed welcome.html
+	welcomeTemplate string
+	//go:embed error.html
+	errorTemplate string
 
 	emptyFuncMap         = template.FuncMap{}
 	emptyStmulusTemplate = `
@@ -55,13 +74,13 @@ var (
 type TemplateName string
 
 const (
-	homePage         = TemplateName("home")
-	dashboardPage    = TemplateName("dashboard")
 	loginPage        = TemplateName("login")
-	logoutPage       = TemplateName("logout")
 	recoveryPage     = TemplateName("recovery")
 	registrationPage = TemplateName("registration")
 	settingsPage     = TemplateName("settings")
+	verificationPage = TemplateName("verification")
+	welcomePage      = TemplateName("welcome")
+	errorPage        = TemplateName("error")
 )
 
 // Register all the Templates during initialisation
@@ -73,18 +92,31 @@ func init() {
 		stimulus  string           // Optional stimulus controller code
 	}
 	// All pages get the commonTemplates
-	commonTemplates := []string{layoutTemplate, navbarTemplate, commonStimulusTemplate, pageHeadingTemplate}
+	commonTemplates := []string{
+		layoutTemplate,
+		messagesTemplate,
+		uiNodesTemplate,
+		uiNodeTextTemplate,
+		uiNodeScriptTemplate,
+		uiNodeInputHiddenTemplate,
+		uiNodeInputDefaultTemplate,
+		uiNodeInputCheckboxTemplate,
+		uiNodeInputButtonTemplate,
+		uiNodeImageTemplate,
+		uiNodeAnchorTemplate,
+		uiDocsButtonTemplate,
+		forkMeTemplate,
+	}
 
 	// The templates and their associated functions to include etc
 	templates := []tmpl{
-		{name: homePage, fmap: emptyFuncMap, templates: []string{homeTemplate}},
-		{name: dashboardPage, fmap: emptyFuncMap, templates: []string{dashboardTemplate}},
-		{name: loginPage, fmap: loginFuncMap(), templates: []string{loginTemplate}},
-		{name: logoutPage, fmap: emptyFuncMap, templates: []string{logoutTemplate}},
-		{name: recoveryPage, fmap: recoveryFuncMap(), templates: []string{recoveryTemplate}},
-		{name: registrationPage, fmap: registrationFuncMap(), templates: []string{registrationTemplate}},
-		{name: settingsPage, fmap: settingsFuncMap(), templates: []string{settingsTemplate}},
-		{name: homePage, fmap: emptyFuncMap, templates: []string{homeTemplate}},
+		{name: loginPage, fmap: emptyFuncMap, templates: []string{loginTemplate}},
+		{name: recoveryPage, fmap: emptyFuncMap, templates: []string{recoveryTemplate}},
+		{name: registrationPage, fmap: emptyFuncMap, templates: []string{registrationTemplate}},
+		{name: settingsPage, fmap: emptyFuncMap, templates: []string{settingsTemplate}},
+		{name: verificationPage, fmap: emptyFuncMap, templates: []string{verificationTemplate}},
+		{name: welcomePage, fmap: emptyFuncMap, templates: []string{welcomeTemplate}},
+		{name: errorPage, fmap: emptyFuncMap, templates: []string{errorTemplate}},
 	}
 	for _, t := range templates {
 		stimulusTemplate := emptyStmulusTemplate
@@ -120,84 +152,82 @@ func globalFuncMap() template.FuncMap {
 			}
 			return fmt.Sprintf("/%s", path)
 		},
-	}
-}
-
-// Functions used by the 'settingsPage' templates
-func settingsFuncMap() template.FuncMap {
-
-	fieldLabel := map[string]string{
-		"password":          "Password",
-		"traits.email":      "Email",
-		"traits.name.first": "First name",
-		"traits.name.last":  "Last name",
-	}
-
-	return template.FuncMap{
-		"labelFor": func(name string) string {
-			if lbl, ok := fieldLabel[name]; ok {
-				return lbl
+		"toUiNodePartial": func(node kratos.UiNode) string {
+			if _, err := node.GetTypeOk(); err {
+				log.Printf("Error toUiNodePartial called with unset node type")
+			} else {
+				if node.Type == "a" {
+					return "\"ui_node_anchor\""
+				} else if node.Type == "img" {
+					return "\"ui_node_image\""
+				} else if node.Type == "input" {
+					switch node.Attributes.UiNodeInputAttributes.Type {
+					case "hidden":
+						return "\"ui_node_input_hidden\""
+					case "submit":
+						return "\"ui_node_input_button\""
+					case "button":
+						return "\"ui_node_input_button\""
+					case "checkbox":
+						return "\"ui_node_input_checkbox\""
+					default:
+						return "\"ui_node_input_default\""
+					}
+				} else if node.Type == "script" {
+					return "\"ui_node_script\""
+				} else if node.Type == "text" {
+					return "\"ui_node_text\""
+				}
+				return "\"ui_node_input_default\""
 			}
-			log.Printf("No labelFor name: %s", name)
 			return ""
 		},
-	}
-}
-
-// Functions used by the 'loginPage' templates
-func loginFuncMap() template.FuncMap {
-
-	fieldLabel := map[string]string{
-		"password":   "Password",
-		"identifier": "Email",
-	}
-
-	return template.FuncMap{
-		"labelFor": func(name string) string {
-			if lbl, ok := fieldLabel[name]; ok {
-				return lbl
+		"getNodeLabel": func(node kratos.UiNode) string {
+			if _, err := node.GetTypeOk(); err {
+				log.Printf("Error toUiNodePartial called with unset node type")
+			} else {
+				if node.Type == "a" {
+					return node.Attributes.UiNodeAnchorAttributes.Title.Text
+				} else if node.Type == "img" {
+					return node.Meta.Label.Text
+				} else if node.Type == "input" {
+					return node.Meta.Label.Text
+				}
 			}
-			log.Printf("No labelFor name: %s", name)
-			return ""
+			return node.Meta.Label.Text
 		},
-	}
-}
-
-// Functions used by the 'recoveryPage' templates
-func recoveryFuncMap() template.FuncMap {
-
-	fieldLabel := map[string]string{
-		"email": "Email",
-	}
-
-	return template.FuncMap{
-		"labelFor": func(name string) string {
-			if lbl, ok := fieldLabel[name]; ok {
-				return lbl
+		"onlyNodesGroups": func(nodes []kratos.UiNode, groups string) []kratos.UiNode {
+			var filtered []kratos.UiNode
+			sGroups := strings.Split(groups, ",")
+			if len(sGroups) == 0 {
+				return nodes
 			}
-			log.Printf("No labelFor name: %s", name)
-			return ""
+			for _, n := range nodes {
+				for _, fg := range sGroups {
+					if n.Group == fg {
+						filtered = append(filtered, n)
+					} else if fg == "all" {
+						return nodes
+					}
+				}
+			}
+			return filtered
 		},
-	}
-}
-
-// Functions used by the 'registration' templates
-func registrationFuncMap() template.FuncMap {
-
-	fieldLabel := map[string]string{
-		"password":          "Password",
-		"traits.email":      "Email",
-		"traits.name.first": "First name",
-		"traits.name.last":  "Last name",
-	}
-
-	return template.FuncMap{
-		"labelFor": func(name string) string {
-			if lbl, ok := fieldLabel[name]; ok {
-				return lbl
+		"dict": func(values ...interface{}) map[string]interface{} {
+			if len(values)%2 != 0 {
+				log.Printf("invalid dict call")
+				return nil
 			}
-			log.Printf("No labelFor name: %s", name)
-			return ""
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					log.Printf("invalid dict call")
+					return nil
+				}
+				dict[key] = values[i+1]
+			}
+			return dict
 		},
 	}
 }

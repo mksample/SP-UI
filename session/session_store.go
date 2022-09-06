@@ -16,7 +16,7 @@ type SessionStore struct {
 
 const (
 	// The cookie we use to store this applications session in
-	sessionCookieName = "kgc-sess"
+	SessionCookieName = "kgc-sess"
 
 	// Keys we store in our application session
 	keyKratosSession = "kratosSession"
@@ -27,7 +27,7 @@ func (s SessionStore) SaveKratosSession(w http.ResponseWriter, r *http.Request, 
 
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
-	session, err := s.Store.Get(r, sessionCookieName)
+	session, err := s.Store.Get(r, SessionCookieName)
 	if err != nil {
 		log.Printf("Error decoding session, %v", err)
 		return err
@@ -45,7 +45,7 @@ func (s SessionStore) GetKratosSession(r *http.Request) *KratosSession {
 
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
-	session, err := s.Store.Get(r, sessionCookieName)
+	session, err := s.Store.Get(r, SessionCookieName)
 	if err != nil {
 		log.Printf("Error decoding session, %v", err)
 		return nil
@@ -55,5 +55,16 @@ func (s SessionStore) GetKratosSession(r *http.Request) *KratosSession {
 		return &ks
 	}
 	return nil
+}
 
+func (s SessionStore) HasKratosSession(r *http.Request) bool {
+	session, err := s.Store.Get(r, SessionCookieName)
+	if err != nil {
+		log.Printf("Error decoding session, %v", err)
+		return false
+	}
+	if _, exists := session.Values[keyKratosSession]; exists {
+		return true
+	}
+	return false
 }

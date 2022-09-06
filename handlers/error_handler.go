@@ -1,15 +1,19 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 )
 
+var ErrorURL string
+
+func InitErrorHandler(URL string) {
+	ErrorURL = URL
+}
+
 // ErrorHandler renders a response when an error occurs
-func ErrorHandler(w http.ResponseWriter, _ *http.Request, err error) {
+func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	log.Printf("ErrorHandler returning 500")
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(500)
-	fmt.Fprintln(w, err.Error())
+	http.Redirect(w, r, ErrorURL, http.StatusMovedPermanently)
 }

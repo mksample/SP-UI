@@ -1,105 +1,82 @@
-{{define "content"}}
+{{define "body"}}
+<div class="app-container" id="settings">
 
-<h2>Update Password</h2>
-<p>Use the form below to change your password</p>
+  <h2 class="typography-h2 card-title">Profile Management and Security Settings</h2>
 
-<div class="md:grid md:grid-cols-1 md:gap-6">
-  <div class="mt-5 md:mt-0">
+  {{if .resp.Ui.Messages}}
+    <div class="card">
+      {{template "messages" dict "Messages" .resp.Ui.Messages "ClassName" "standalone"}}
+    </div>
+  {{end}}
 
-    <form method="{{.password.Method}}" action="{{.password.Action}}" accept-charset="UTF-8">
-      <div class="shadow sm:rounded-md sm:overflow-hidden">
-          <div class="px-4 py-5 bg-white space-y-6 sm:p-6">
-            {{range .password.Fields}}
-              {{ $field := . }}
-              <div class="grid grid-cols-3 gap-6">
-                <div class="col-span-3 sm:col-span-2">
-                  <label class="block text-sm font-medium text-gray-700">{{labelFor .Name}}</label>
-                  <input required="{{.Required}}"
-                        name="{{.Name}}"
-                        data-cy="password_{{.Name}}"
-                        type="{{.Type}}"
-                        value="{{.Value}}"
-                        {{if .Pattern}} pattern="{{.Pattern}}" {{end}}
-                        {{if .Disabled}}disabled{{end}}
-                        class="border mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md px-6 py-4"
-                  />
-                </div>
-
-                {{range .Messages }}
-                  <!-- Error messages -->
-                  <p data-cy="password_field_message_id_{{$field.Name}}" class="mt-2 text-sm text-red-500 bg-red-50">
-                    <span class="font-extrabold">{{.ID}}</span> &nbsp; {{.Text}}
-                  </p>
-                {{end}}
-
-              </div>
-            {{end}}
-
-            <div class="grid grid-cols-3 gap-6">
-              <div class="col-span-3 sm:col-span-2">
-                <a href="/" class="button sm:w-auto bg-gray-50 text-gray-400 hover:text-gray-900 leading-6 py-2 px-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-gray-300 focus:outline-none transition-colors duration-200">Cancel</a>
-                <button data-cy="password_submit"
-                        class="ml-5 bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Update
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
+  <div class="card">
+    <form action="{{.resp.Ui.Action}}" method="{{.resp.Ui.Method}}">
+      <h3 class="typography-h3">Profile Settings</h3>
+      {{template "ui_nodes" dict "Nodes" .resp.Ui.Nodes "Only" "profile,default"}}
     </form>
   </div>
-</div>
 
+  {{if (onlyNodesGroups .resp.Ui.Nodes "password")}}
+    <div class="card">
+      <form action="{{.resp.Ui.Action}}" method="{{.resp.Ui.Method}}">
+        <h3 class="typography-h3">Change Password</h3>
+        {{template "ui_nodes" dict "Nodes" .resp.Ui.Nodes "Only" "password,default"}}
+      </form>
+    </div>
+  {{end}}
 
+  {{if (onlyNodesGroups .resp.Ui.Nodes "oidc")}}
+    <div class="card">
+      <form action="{{.resp.Ui.Action}}" method="{{.resp.Ui.Method}}">
+        <h3 class="typography-h3">Manage Social Sign In</h3>
+        {{template "ui_nodes" dict "Nodes" .resp.Ui.Nodes "Only" "oidc,default"}}
+      </form>
+    </div>
+  {{end}}
 
-<h2>Update Profile</h2>
-<p>Use the form below to update your profile</p>
+  {{if (onlyNodesGroups .resp.Ui.Nodes "lookup_secret")}}
+    <div class="card">
+      <form action="{{.resp.Ui.Action}}" method="{{.resp.Ui.Method}}">
+        <h3 class="typography-h3">Manage 2FA Backup Recovery Codes</h3>
+        <p class="typography-paragraph">Recovery codes can be used in panic situations where you have lost access to
+          your 2FA device.</p>
+          {{template "ui_nodes" dict "Nodes" .resp.Ui.Nodes "Only" "lookup_secret,default"}}
+      </form>
+    </div>
+  {{end}}
 
-<div class="md:grid md:grid-cols-1 md:gap-6">
-  <div class="mt-5 md:mt-0">
-    <form method="{{.profile.Method}}" action="{{.profile.Action}}" accept-charset="UTF-8">
-      <div class="shadow sm:rounded-md sm:overflow-hidden">
-        <div class="px-4 py-5 bg-white space-y-6 sm:p-6">
-          {{range .profile.Fields}}
-            {{ $field := . }}
-            <div class="grid grid-cols-3 gap-6">
-              <div class="col-span-3 sm:col-span-2">
-                <label class="block text-sm font-medium text-gray-700">{{labelFor .Name}}</label>
-                <input required="{{.Required}}"
-                      name="{{.Name}}"
-                      data-cy="profile_{{.Name}}"
-                      type="{{.Type}}"
-                      value="{{.Value}}"
-                      {{if .Pattern}} pattern="{{.Pattern}}" {{end}}
-                      {{if .Disabled}}disabled{{end}}
-                      class="border mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md px-6 py-4"
-                />
-              </div>
+  {{if (onlyNodesGroups .resp.Ui.Nodes "totp")}}
+    <div class="card">
+      <form action="{{.resp.Ui.Action}}" method="{{.resp.Ui.Method}}">
+        <h3 class="typography-h3">Manage 2FA TOTP Authenticator App</h3>
+        <p class="typography-paragraph">Add a TOTP Authenticator App to your account to improve your account security.
+          Popular Authenticator Apps are <a href="https://www.lastpass.com" target="_blank">LastPass</a> and Google
+          Authenticator (<a href="https://apps.apple.com/us/app/google-authenticator/id388497605"
+                            target="_blank">iOS</a>, <a
+            href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=en&gl=US"
+            target="_blank">Android</a>).
+        </p>
+        {{template "ui_nodes" dict "Nodes" .resp.Ui.Nodes "Only" "totp,default"}}
+      </form>
+    </div>
+  {{end}}
 
-              {{range .Messages }}
-                <!-- Error messages -->
-                <p data-cy="profile_field_message_id_{{$field.Name}}" class="mt-2 text-sm text-red-500 bg-red-50">
-                  <span class="font-extrabold">{{.ID}}</span> &nbsp; {{.Text}}
-                </p>
-              {{end}}
+  {{if (onlyNodesGroups .resp.Ui.Nodes "webauthn")}}
+    <div class="card">
+      <form action="{{.resp.Ui.Action}}" method="{{.resp.Ui.Method}}">
+        <h3 class="typography-h3">Manage Hardware Tokens and Biometrics</h3>
+        <p class="typography-paragraph">
+          Use Hardware Tokens (e.g. YubiKey) or Biometrics (e.g. FaceID, TouchID) to enhance your account security.
+        </p>
+        {{template "ui_nodes" dict "Nodes" .resp.Ui.Nodes "Only" "webauthn,default"}}
+      </form>
+    </div>
+  {{end}}
 
-            </div>
-          {{end}}
-
-          <div class="grid grid-cols-3 gap-6">
-            <div class="col-span-3 sm:col-span-2">
-              <a href="/" class="button sm:w-auto bg-gray-50 text-gray-400 hover:text-gray-900 leading-6 py-2 px-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-gray-300 focus:outline-none transition-colors duration-200">Cancel</a>
-              <button data-cy="profile_submit"
-                      class="ml-5 bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                  Update
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
+  <div class="card">
+    <div class="card-action">
+      <a class="typography-link typography-h2" href="welcome">Back</a>
+    </div>
   </div>
 </div>
-
-{{ end }}
+{{end}}

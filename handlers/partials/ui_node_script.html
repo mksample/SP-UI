@@ -1,0 +1,11 @@
+{{define "ui_node_script"}}
+<script
+src="{{.Attributes.UiNodeScriptAttributes.Src}}"
+type="{{.Attributes.UiNodeScriptAttributes.Type}}"
+integrity="{{.Attributes.UiNodeScriptAttributes.Integrity}}"
+referrerpolicy="{{.Attributes.UiNodeScriptAttributes.Referrerpolicy}}"
+crossorigin="{{.Attributes.UiNodeScriptAttributes.Crossorigin}}"
+{{if .Attributes.UiNodeScriptAttributes.Async}}async{{end}}
+data-testid="node/script/{{.Attributes.UiNodeScriptAttributes.Id}}"
+></script>
+{{ end }}

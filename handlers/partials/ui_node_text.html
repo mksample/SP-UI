@@ -1,0 +1,21 @@
+{{define "ui_node_text"}}
+<div data-testid="node/text/{{.Attributes.UiNodeTextAttributes.Id}}">
+  <p style="margin-bottom: .5rem" data-testid="node/text/{{.Attributes.UiNodeTextAttributes.Id}}/label" class="typography-paragraph">
+    {{getNodeLabel .}}
+  </p>
+  {{if (eq .Attributes.UiNodeTextAttributes.Text.Id 1050015)}}
+    <!-- lookup_secret -->
+    <div class="container-fluid" data-testid="node/text/{{.Attributes.UiNodeTextAttributes.Id}}/text">
+      <div class="row">
+        {{range .Attributes.UiNodeTextAttributes.Text.Context.Secrets}}
+          <!-- Used lookup_secret has ID 1050014 -->
+          <div data-testid="node/text/{{.Attributes.UiNodeTextAttributes.Id}}/lookup_secret" class="col-xs-3 recovery-code">{{if (eq .Id 1050014)}}<code>Used</code>{{else}}<code>{{.Text}}</code>{{end}}</div>
+        {{end}}
+      </div>
+      <!--Recovery Code-->
+    </div>
+  {{else}}
+    <pre style="margin-top: 0"><code data-testid="node/text/{{.Attributes.UiNodeTextAttributes.Id}}/text">{{.Attributes.UiNodeTextAttributes.Text.Text}}</code></pre>
+  {{end}}
+</div>
+{{ end }}

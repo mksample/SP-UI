@@ -1,0 +1,7 @@
+{{define "messages"}}
+<div class="messages {{.ClassName}}">
+    {{range .}}
+      <div class="message" data-testid="ui/message/{{.Id}}">{{.Text}}</div>
+    {{end}}
+</div>
+{{end}}

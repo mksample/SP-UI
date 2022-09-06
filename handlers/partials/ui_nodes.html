@@ -1,0 +1,24 @@
+{{define "ui_nodes"}}
+{{range (onlyNodesGroups .Nodes .Only)}}
+    {{$templateName = toUiNodePartial .}}
+    {{if eq $templateName "ui_node_anchor"}}
+        {{template "ui_node_anchor" .}}
+    {{else if eq $templateName "ui_node_image"}}
+        {{template "ui_node_image" .}}
+    {{else if eq $templateName "ui_node_input_hidden"}}
+        {{template "ui_node_input_hidden" .}}
+    {{else if eq $templateName "ui_node_input_button"}}
+        {{template "ui_node_input_button" .}}
+    {{else if eq $templateName "ui_node_input_checkbox"}}
+        {{template "ui_node_input_checkbox" .}}
+    {{else if eq $templateName "ui_node_input_default"}}
+        {{template "ui_node_input_default" .}}
+    {{else if eq $templateName "ui_node_script"}}
+        {{template "ui_node_script" .}}
+    {{else if eq $templateName "ui_node_text"}}
+        {{template "ui_node_text" .}}
+    {{else}}
+        {{template "ui_node_input_default"}}
+    {{end}}
+{{end}}
+{{end}}

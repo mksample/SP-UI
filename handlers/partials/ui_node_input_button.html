@@ -1,0 +1,19 @@
+{{define "ui_node_input_button"}}
+<div class="input-button">
+  <button
+    class="button"
+    onclick="{{.Attributes.UiNodeInputAttributes.Onclick}}"
+    name="{{.Attributes.UiNodeInputAttributes.Name}}"
+    type="{{.Attributes.UiNodeInputAttributes.Type}}"
+    value="{{.Attributes.UiNodeInputAttributes.Value}}"
+    {{if .Attributes.UiNodeInputAttributes.Disabled}}disabled{{end}}
+  >
+    {{getNodeLabel .}}
+  </button>
+  {{if .Messages}}
+    <span class="button-helper">
+        {{template "messages" dict "Messages" .Messages "ClassName" ""}}
+    </span>
+  {{end}}
+</div>
+{{ end }}

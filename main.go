@@ -29,7 +29,6 @@ import (
 var staticFS embed.FS
 
 func main() {
-
 	opt := options.NewOptions().SetFromCommandLine()
 	if err := opt.Validate(); err != nil {
 		log.Fatalf("Error parsing command line: %v", err)
@@ -42,8 +41,12 @@ func main() {
 	log.Printf("Number of Cookie store keys: %d", len(opt.CookieStoreKeyPairs))
 
 	// Cetup Kratos API client
-	api_client.InitPublicClient(*opt.KratosPublicURL)
-	api_client.InitAdminClient(*opt.KratosAdminURL)
+	if _, err := api_client.InitPublicClient(opt); err != nil {
+		log.Fatalf("Error initializing public API client failed with error: %v", err)
+	}
+	if _, err := api_client.InitAdminClient(opt); err != nil {
+		log.Fatalf("Error initializing admin API client failed with error: %v", err)
+	}
 
 	// Setup sesssion store in cookies
 	var store = sessions.NewCookieStore(opt.CookieStoreKeyPairs...)
@@ -57,41 +60,47 @@ func main() {
 	r.Use(gh.RecoveryHandler(gh.PrintRecoveryStack(true)),
 		middleware.NoCacheMiddleware)
 
-	homeP := handlers.HomeParams{
+	welcomeP := handlers.WelcomeParams{
 		SessionStore: session.SessionStore{Store: store},
 		FS:           fsys,
 	}
-	r.HandleFunc("/", homeP.Home)
+	r.HandleFunc("/", welcomeP.Welcome)
 
 	regP := handlers.RegistrationParams{
 		FlowRedirectURL: opt.RegistrationURL(),
+		LoginURL:        opt.LoginPageURL(),
 		FS:              fsys,
 	}
-	r.HandleFunc("/auth/registration", regP.Registration)
+	r.HandleFunc("/registration", regP.Registration)
 
-	settingsP := handlers.SettingsParams{
-		FlowRedirectURL: opt.SettingsURL(),
+	verificationP := handlers.VerificationParams{
+		FlowRedirectURL: opt.VerificationURL(),
 		FS:              fsys,
 	}
-	r.HandleFunc("/auth/settings", settingsP.Settings)
+	r.HandleFunc("/verification", verificationP.Verification)
 
 	loginP := handlers.LoginParams{
 		FlowRedirectURL: opt.LoginFlowURL(),
+		RegistrationURL: opt.RegistrationURL(),
 		FS:              fsys,
 	}
-	r.HandleFunc("/auth/login", loginP.Login).Name("login")
-
-	logoutP := handlers.LogoutParams{
-		FlowRedirectURL: opt.LogoutFlowURL(),
-		FS:              fsys,
-	}
-	r.HandleFunc("/auth/logout", logoutP.Logout)
+	r.HandleFunc("/login", loginP.Login).Name("login")
 
 	recoverP := handlers.RecoveryParams{
 		FlowRedirectURL: opt.RecoveryFlowURL(),
 		FS:              fsys,
 	}
-	r.HandleFunc("/auth/recovery", recoverP.Recovery)
+	r.HandleFunc("/recovery", recoverP.Recovery)
+
+	errorP := handlers.ErrorParams{
+		RedirectURL: opt.GetBaseURL(),
+		FS:          fsys,
+	}
+	r.HandleFunc("/error", errorP.Error)
+	handlers.InitErrorHandler(opt.ErrorURL())
+
+	r.HandleFunc("/health/alive", handlers.Health)
+	r.HandleFunc("/health/ready", handlers.Health)
 
 	r.PathPrefix("/static/").Handler(hashfs.FileServer(fsys))
 
@@ -102,12 +111,12 @@ func main() {
 		RedirectUnauthURL: MustURL(r.Get("login")).String(),
 	}
 
-	dashP := handlers.DashboardParams{
-		SessionStore: session.SessionStore{Store: store},
-		FS:           fsys,
+	settingsP := handlers.SettingsParams{
+		FlowRedirectURL: opt.SettingsURL(),
+		FS:              fsys,
 	}
-	r.Handle("/dashboard", Middleware(
-		http.HandlerFunc(dashP.Dashboard),
+	r.Handle("/settings", Middleware(
+		http.HandlerFunc(settingsP.Settings),
 		authP.KratoAuthMiddleware,
 	))
 

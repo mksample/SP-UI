@@ -1,0 +1,8 @@
+{{define "ui_node_image"}}
+<img
+  src="{{.Attributes.UiNodeImageAttributes.Src}}"
+  width="{{.Attributes.UiNodeImageAttributes.Width}}"
+  height="{{.Attributes.UiNodeImageAttributes.Height}}"
+  alt="{{getNodeLabel . }}"
+  data-testid="node/image/{{.Attributes.UiNodeImageAttributes.Id}}" />
+{{ end }}

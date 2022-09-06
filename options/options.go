@@ -45,11 +45,14 @@ type Options struct {
 	ShutdownWait time.Duration
 
 	// TLSCertPath is an optional Path to certificate file.
-	// Should be set up together with TLSKeyPath to enable HTTPS.
+	// Should be set up together with TLSKeyPath and TLSCaPath to enable HTTPS.
 	TLSCertPath string
 	// TLSCertPath is an optional path to key file.
-	// Should be set up together with TLSCertPath to enable HTTPS.
+	// Should be set up together with TLSCertPath and TLSCaPAth to enable HTTPS.
 	TLSKeyPath string
+	// TLSCaPath is an option path to a certificate bundle.
+	// Should be set up together with TLSCertPath and TLSKeyPath to enable HTTPS.
+	TLSCaPath string
 
 	// Pairs of authentication and encryption keys for Cookies
 	CookieStoreKeyPairs [][]byte
@@ -87,9 +90,14 @@ func (o *Options) SetFromCommandLine() *Options {
 
 	flag.DurationVar(&o.ShutdownWait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
 
-	flag.StringVar(&o.TLSCertPath, "tls-cert-path", "", "Optional path to the certificate file. Use in conjunction with tls-key-path to enable https.")
+	tlsCertPath := os.Getenv("TLS_CERT_PATH")
+	flag.StringVar(&o.TLSCertPath, "tls-cert-path", "", "Optional path to the certificate file. Use in conjunction with tls-key-path and tls-ca-path to enable https.")
 
-	flag.StringVar(&o.TLSKeyPath, "tls-key-path", "", "Optional path to the key file. Use in conjunction with tls-cert-path to enable https.")
+	tlsKeyPath := os.Getenv("TLS_KEY_PATH")
+	flag.StringVar(&o.TLSKeyPath, "tls-key-path", "", "Optional path to the key file. Use in conjunction with tls-cert-path and tls-ca-path to enable https.")
+
+	tlsCaPath := os.Getenv("TLS_CA_PATH")
+	flag.StringVar(&o.TLSCaPath, "tls-ca-path", "", "Optional path to the key file. Use in conjunction with tls-cert-path and tls-key-path to enable https.")
 
 	var allCookieStoreKeyPairs string
 	flag.StringVar(&allCookieStoreKeyPairs, "cookie-store-key-pairs", os.Getenv("COOKIE_STORE_KEY_PAIRS"), "Pairs of authentication and encryption keys, enclose then in quotes. See the gen-cookie-store-key-pair flag to generate")
@@ -113,6 +121,9 @@ func (o *Options) SetFromCommandLine() *Options {
 	o.KratosPublicURL = KratosPublicURL.URL
 	o.KratosBrowserURL = KratosBrowserURL.URL
 	o.BaseURL = BaseURL.URL
+	o.TLSCertPath = tlsCertPath
+	o.TLSKeyPath = tlsKeyPath
+	o.TLSCaPath = tlsCaPath
 	o.CookieStoreKeyPairs = make([][]byte, 0)
 	pairs := strings.Split(allCookieStoreKeyPairs, " ")
 	for _, s := range pairs {
@@ -152,8 +163,12 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("'tls-key-path' file '%s' invalid", o.TLSKeyPath)
 	}
 
-	if (o.TLSCertPath == "" && o.TLSKeyPath != "") || (o.TLSCertPath != "" && o.TLSKeyPath == "") {
-		return fmt.Errorf("To enable HTTPS, provide 'tls-key-path' and 'tls-cert-path'")
+	if o.TLSCaPath != "" && !fileExists(o.TLSCaPath) {
+		return fmt.Errorf("'tls-ca-path' file '%s' invalid", o.TLSCaPath)
+	}
+
+	if !((o.TLSCertPath == "" && o.TLSKeyPath == "" && o.TLSCaPath == "") || (o.TLSCertPath != "" && o.TLSKeyPath != "" && o.TLSCaPath != "")) {
+		return fmt.Errorf("To enable HTTPS, provide 'tls-key-path', 'tls-cert-path' and 'tls-ca-path")
 	}
 
 	if !(len(o.CookieStoreKeyPairs) == 1 || len(o.CookieStoreKeyPairs)%2 == 0) {
@@ -170,6 +185,17 @@ func (o *Options) WhoAmIURL() string {
 	return url.String()
 }
 
+// GetBaseURL returns the URL to return to the base page
+func (o *Options) GetBaseURL() string {
+	return o.KratosBrowserURL.String()
+}
+
+func (o *Options) ErrorURL() string {
+	url := o.KratosBrowserURL
+	url.Path = "/error"
+	return url.String()
+}
+
 // RegistrationURL returns the URL to redirect to that will
 // start the registration flow
 func (o *Options) RegistrationURL() string {
@@ -183,6 +209,14 @@ func (o *Options) RegistrationURL() string {
 func (o *Options) SettingsURL() string {
 	url := o.KratosBrowserURL
 	url.Path = "/self-service/settings/browser"
+	return url.String()
+}
+
+// VerificationURL returns the URL to redirect to that will
+// start the verification flow
+func (o *Options) VerificationURL() string {
+	url := o.KratosBrowserURL
+	url.Path = "/self-service/verification/browser"
 	return url.String()
 }
 
@@ -213,7 +247,7 @@ func (o *Options) LogoutFlowURL() string {
 // LoginURL returns the URL to redirect to that shows the login page
 func (o *Options) LoginPageURL() string {
 	url := o.BaseURL
-	url.Path = "/auth/login"
+	url.Path = "/login"
 	return url.String()
 }
 

@@ -1,0 +1,15 @@
+{{define "ui_node_anchor"}}
+<div class="input-button">
+  <a class="button"
+     href="{{.Attributes.UiNodeAnchorAttributes.Href}}"
+     data-testid="node/anchor/{{.Attributes.UiNodeAnchorAttributes.Id}}"
+  >
+    {{.Attributes.UiNodeAnchorAttributes.Title.Text}}
+  </a>
+  {{if .Messages}}
+    <span class="button-helper">
+      {{template "messages" dict "Messages" .Messages "ClassName" ""}}
+    </span>
+  {{end}}
+</div>
+{{ end }}
