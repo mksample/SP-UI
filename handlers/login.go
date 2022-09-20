@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"log"
 	"net/http"
 
 	"github.com/benbjohnson/hashfs"
 	"github.com/davidoram/kratos-selfservice-ui-go/api_client"
-	"github.com/davidoram/kratos-selfservice-ui-go/session"
 	kratos "github.com/ory/kratos-client-go"
 )
 
@@ -34,15 +32,18 @@ func (lp LoginParams) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Calling Kratos API to create self service logout")
-	logout, _, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(context.Background()).Cookie(session.SessionCookieName).Execute()
-	if err != nil {
-		log.Printf("Error creating self service logout flow: %v, redirecting to /", err)
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
-		return
+	var logoutURL string
+	logoutResp, rawResp, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
+	if rawResp != nil && rawResp.StatusCode == 401 {
+		logoutURL = ""
+	} else if rawResp == nil && err != nil {
+		log.Printf("Getting logout url: %v", err)
+	} else {
+		logoutURL = logoutResp.GetLogoutUrl()
 	}
 
 	log.Print("Calling Kratos API to get self service login")
-	loginResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceLoginFlow(context.Background()).Id(flow).Cookie(session.SessionCookieName).Execute()
+	loginResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceLoginFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
 		log.Printf("Error getting self service login flow: %v, redirecting to /", err)
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)
@@ -53,7 +54,7 @@ func (lp LoginParams) Login(w http.ResponseWriter, r *http.Request) {
 		"resp":            loginResp,
 		"isAuthenticated": *loginResp.Refresh || loginResp.RequestedAal == kratos.AUTHENTICATORASSURANCELEVEL_AAL2.Ptr(),
 		"signUpUrl":       lp.RegistrationURL,
-		"logoutUrl":       logout.LogoutUrl,
+		"logoutUrl":       logoutURL,
 		"fs":              lp.FS,
 	}
 	if err = GetTemplate(loginPage).Render("layout", w, r, dataMap); err != nil {

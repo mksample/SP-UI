@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"log"
 	"net/http"
 
 	"github.com/benbjohnson/hashfs"
 	"github.com/davidoram/kratos-selfservice-ui-go/api_client"
-	"github.com/davidoram/kratos-selfservice-ui-go/session"
 )
 
 // RegistrationParams configure the Login http handler
@@ -23,7 +21,6 @@ type RegistrationParams struct {
 
 // Login handler displays the login screen
 func (rp RegistrationParams) Registration(w http.ResponseWriter, r *http.Request) {
-
 	// Start the registration flow with Kratos if required
 	flow := r.URL.Query().Get("flow")
 	if flow == "" {
@@ -33,8 +30,9 @@ func (rp RegistrationParams) Registration(w http.ResponseWriter, r *http.Request
 	}
 
 	log.Print("Calling Kratos API to get self service registration")
-	registrationResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRegistrationFlow(context.Background()).Id(flow).Cookie(session.SessionCookieName).Execute()
+	registrationResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRegistrationFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
+		log.Printf("%v", rawResp)
 		log.Printf("Error getting self service registration flow: %v, redirecting to /", err)
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 		return

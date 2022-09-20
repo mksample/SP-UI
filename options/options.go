@@ -178,10 +178,14 @@ func (o *Options) Validate() error {
 	return nil
 }
 
-// WhoAmIURL returns the URL to POST to to get the session
-func (o *Options) WhoAmIURL() string {
-	url := o.KratosPublicURL
-	url.Path = "/sessions/whoami"
+// TwoFAURL returns the URL to redirect to that will
+// start the 2FA login flow
+func (o *Options) TwoFAURL() string {
+	url := o.KratosBrowserURL
+	url.Path = "/login"
+	urlQ := url.Query()
+	urlQ.Add("aal", "aal2")
+	url.RawQuery = urlQ.Encode()
 	return url.String()
 }
 

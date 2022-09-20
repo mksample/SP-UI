@@ -1,6 +1,6 @@
 {{define "ui_nodes"}}
 {{range (onlyNodesGroups .Nodes .Only)}}
-    {{$templateName = toUiNodePartial .}}
+    {{$templateName:=toUiNodePartial .}}
     {{if eq $templateName "ui_node_anchor"}}
         {{template "ui_node_anchor" .}}
     {{else if eq $templateName "ui_node_image"}}
@@ -18,7 +18,7 @@
     {{else if eq $templateName "ui_node_text"}}
         {{template "ui_node_text" .}}
     {{else}}
-        {{template "ui_node_input_default"}}
+        {{template "ui_node_input_default" .}}
     {{end}}
 {{end}}
 {{end}}

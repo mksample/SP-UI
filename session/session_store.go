@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/sessions"
+	client "github.com/ory/kratos-client-go"
 )
 
 // SessionStore holds a connection to the application Session store
@@ -23,7 +24,7 @@ const (
 )
 
 // SaveKratosSession stores a string as the KratosSession value
-func (s SessionStore) SaveKratosSession(w http.ResponseWriter, r *http.Request, ks string) error {
+func (s SessionStore) SaveKratosSession(w http.ResponseWriter, r *http.Request, ks *client.Session) error {
 
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
@@ -34,14 +35,14 @@ func (s SessionStore) SaveKratosSession(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Add the value into the session store
-	session.Values[keyKratosSession] = ks
+	session.Values[keyKratosSession] = *ks
 
 	// Save it before we write to the response/return from the handler.
 	return session.Save(r, w)
 }
 
 // GetKratosSession returns the KratosSession or nil
-func (s SessionStore) GetKratosSession(r *http.Request) *KratosSession {
+func (s SessionStore) GetKratosSession(r *http.Request) *client.Session {
 
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
@@ -51,7 +52,7 @@ func (s SessionStore) GetKratosSession(r *http.Request) *KratosSession {
 		return nil
 	}
 	if v, exists := session.Values[keyKratosSession]; exists {
-		ks := NewKratosSession(v.(string))
+		ks := v.(client.Session)
 		return &ks
 	}
 	return nil
