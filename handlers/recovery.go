@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"log"
 	"net/http"
 
 	"github.com/benbjohnson/hashfs"
 	"github.com/davidoram/kratos-selfservice-ui-go/api_client"
-	"github.com/davidoram/kratos-selfservice-ui-go/session"
 )
 
 // RecoveryParams configure the Login http handler
@@ -32,7 +30,7 @@ func (rp RecoveryParams) Recovery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Print("Calling Kratos API to get self service recovery")
-	recoveryResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRecoveryFlow(context.Background()).Id(flow).Cookie(session.SessionCookieName).Execute()
+	recoveryResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRecoveryFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
 		log.Printf("Error getting self service recovery flow: %v, redirecting to /", err)
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)

@@ -1,6 +1,6 @@
 {{define "ui_node_image"}}
 <img
-  src="{{.Attributes.UiNodeImageAttributes.Src}}"
+  src="{{.Attributes.UiNodeImageAttributes.Src | safeURL}}"
   width="{{.Attributes.UiNodeImageAttributes.Width}}"
   height="{{.Attributes.UiNodeImageAttributes.Height}}"
   alt="{{getNodeLabel . }}"

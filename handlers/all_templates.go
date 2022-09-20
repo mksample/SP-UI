@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"reflect"
 	"strings"
 
 	"github.com/benbjohnson/hashfs"
@@ -23,6 +24,8 @@ var (
 	layoutTemplate string
 	//go:embed partials/messages.html
 	messagesTemplate string
+	//go:embed partials/ui.html
+	uiTemplate string
 	//go:embed partials/ui_nodes.html
 	uiNodesTemplate string
 	//go:embed partials/ui_node_text.html
@@ -43,6 +46,8 @@ var (
 	uiNodeAnchorTemplate string
 	//go:embed partials/ui_docs_button.html
 	uiDocsButtonTemplate string
+	//go:embed partials/ui_screen_button.html
+	uiScreenButtonTemplate string
 	//go:embed partials/fork_me.html
 	forkMeTemplate string
 
@@ -95,6 +100,7 @@ func init() {
 	commonTemplates := []string{
 		layoutTemplate,
 		messagesTemplate,
+		uiTemplate,
 		uiNodesTemplate,
 		uiNodeTextTemplate,
 		uiNodeScriptTemplate,
@@ -105,6 +111,7 @@ func init() {
 		uiNodeImageTemplate,
 		uiNodeAnchorTemplate,
 		uiDocsButtonTemplate,
+		uiScreenButtonTemplate,
 		forkMeTemplate,
 	}
 
@@ -138,10 +145,40 @@ func init() {
 	}
 }
 
+// TextSecrets is a struct for passing UiNodeText context secrets to a template
+type textSecret struct {
+	Id   int64
+	Text string
+}
+
+// Marshals data from a text secret map
+func (ts *textSecret) marshal(m map[string]interface{}) {
+	ts.Id = int64(m["id"].(float64))
+	ts.Text = m["text"].(string)
+}
+
 // Default template functions, added to all templates
 func globalFuncMap() template.FuncMap {
 
 	return template.FuncMap{
+		"safeURL": func(s *string) template.URL {
+			if s == nil {
+				return ""
+			}
+			return template.URL(*s)
+		},
+		"safeAttr": func(s *string) template.HTMLAttr {
+			if s == nil {
+				return ""
+			}
+			return template.HTMLAttr(*s)
+		},
+		"safeJS": func(s *string) template.JS {
+			if s == nil {
+				return ""
+			}
+			return template.JS(*s)
+		},
 		"assetPath": func(fs hashfs.FS, name string) string {
 			if strings.HasPrefix(name, "/") {
 				log.Printf("Error assetPath called with name: '%s' should not start with '/'", name)
@@ -152,66 +189,20 @@ func globalFuncMap() template.FuncMap {
 			}
 			return fmt.Sprintf("/%s", path)
 		},
-		"toUiNodePartial": func(node kratos.UiNode) string {
-			if _, err := node.GetTypeOk(); err {
-				log.Printf("Error toUiNodePartial called with unset node type")
-			} else {
-				if node.Type == "a" {
-					return "\"ui_node_anchor\""
-				} else if node.Type == "img" {
-					return "\"ui_node_image\""
-				} else if node.Type == "input" {
-					switch node.Attributes.UiNodeInputAttributes.Type {
-					case "hidden":
-						return "\"ui_node_input_hidden\""
-					case "submit":
-						return "\"ui_node_input_button\""
-					case "button":
-						return "\"ui_node_input_button\""
-					case "checkbox":
-						return "\"ui_node_input_checkbox\""
-					default:
-						return "\"ui_node_input_default\""
-					}
-				} else if node.Type == "script" {
-					return "\"ui_node_script\""
-				} else if node.Type == "text" {
-					return "\"ui_node_text\""
+		"getTextSecrets": func(node kratos.UiNode) []textSecret {
+			ts := []textSecret{}
+			secrets := node.Attributes.UiNodeTextAttributes.Text.Context["secrets"]
+			v := reflect.ValueOf(secrets)
+			if v.Kind() == reflect.Slice {
+				for i := 0; i < v.Len(); i++ {
+					m := v.Index(i).Interface().(map[string]interface{})
+					newTs := textSecret{}
+					newTs.marshal(m)
+					ts = append(ts, newTs)
 				}
-				return "\"ui_node_input_default\""
+				return ts
 			}
-			return ""
-		},
-		"getNodeLabel": func(node kratos.UiNode) string {
-			if _, err := node.GetTypeOk(); err {
-				log.Printf("Error toUiNodePartial called with unset node type")
-			} else {
-				if node.Type == "a" {
-					return node.Attributes.UiNodeAnchorAttributes.Title.Text
-				} else if node.Type == "img" {
-					return node.Meta.Label.Text
-				} else if node.Type == "input" {
-					return node.Meta.Label.Text
-				}
-			}
-			return node.Meta.Label.Text
-		},
-		"onlyNodesGroups": func(nodes []kratos.UiNode, groups string) []kratos.UiNode {
-			var filtered []kratos.UiNode
-			sGroups := strings.Split(groups, ",")
-			if len(sGroups) == 0 {
-				return nodes
-			}
-			for _, n := range nodes {
-				for _, fg := range sGroups {
-					if n.Group == fg {
-						filtered = append(filtered, n)
-					} else if fg == "all" {
-						return nodes
-					}
-				}
-			}
-			return filtered
+			return nil
 		},
 		"dict": func(values ...interface{}) map[string]interface{} {
 			if len(values)%2 != 0 {
@@ -228,6 +219,75 @@ func globalFuncMap() template.FuncMap {
 				dict[key] = values[i+1]
 			}
 			return dict
+		},
+		"toUiNodePartial": func(node kratos.UiNode) string {
+			if _, ok := node.GetTypeOk(); !ok {
+				log.Printf("Error toUiNodePartial called with unset node type")
+			} else {
+				if node.Type == "a" {
+					return "ui_node_anchor"
+				} else if node.Type == "img" {
+					return "ui_node_image"
+				} else if node.Type == "input" {
+
+					switch node.Attributes.UiNodeInputAttributes.Type {
+					case "hidden":
+						return "ui_node_input_hidden"
+					case "submit":
+						return "ui_node_input_button"
+					case "button":
+						return "ui_node_input_button"
+					case "checkbox":
+						return "ui_node_input_checkbox"
+					default:
+						return "ui_node_input_default"
+					}
+				} else if node.Type == "script" {
+					return "ui_node_script"
+				} else if node.Type == "text" {
+					return "ui_node_text"
+				}
+				return "ui_node_input_default"
+			}
+			return "ui_node_input_default"
+		},
+		"getNodeLabel": func(node kratos.UiNode) string {
+			if _, ok := node.GetTypeOk(); !ok {
+				log.Printf("Error getNodeLabel called with unset node type")
+			} else {
+				if node.Type == "a" {
+					return node.Attributes.UiNodeAnchorAttributes.Title.Text
+				} else if node.Type == "img" {
+					return node.Meta.Label.Text
+				} else if node.Type == "input" {
+					if node.Attributes.UiNodeInputAttributes.HasLabel() {
+						return node.Attributes.UiNodeInputAttributes.Label.Text
+					}
+				}
+			}
+			if node.Meta.HasLabel() {
+				return node.Meta.Label.Text
+			} else {
+				return ""
+			}
+		},
+		"onlyNodesGroups": func(nodes []kratos.UiNode, groups string) []kratos.UiNode {
+			var filtered []kratos.UiNode
+			sGroups := strings.Split(groups, ",")
+			if len(sGroups) == 0 {
+				return nodes
+			}
+			for _, n := range nodes {
+				for _, fg := range sGroups {
+					if n.Group == fg {
+						filtered = append(filtered, n)
+						break
+					} else if fg == "all" {
+						return nodes
+					}
+				}
+			}
+			return filtered
 		},
 	}
 }

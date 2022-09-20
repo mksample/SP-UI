@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/cookiejar"
 	"sync"
 
 	"github.com/davidoram/kratos-selfservice-ui-go/options"
@@ -17,7 +18,6 @@ var (
 )
 
 func InitPublicClient(opt *options.Options) (*kratos.APIClient, error) {
-
 	var tlsConfig *tls.Config
 	var err error
 	if opt.TLSCertPath != "" {
@@ -31,11 +31,16 @@ func InitPublicClient(opt *options.Options) (*kratos.APIClient, error) {
 	configuration.UserAgent = "Public self service UI"
 	configuration.Host = url.Host
 	configuration.Scheme = url.Scheme
+	cj, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+	}
 	if tlsConfig != nil {
 		configuration.HTTPClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsConfig,
 			},
+			Jar: cj,
 		}
 	}
 	configuration.Servers = []kratos.ServerConfiguration{
@@ -71,11 +76,16 @@ func InitAdminClient(opt *options.Options) (*kratos.APIClient, error) {
 	configuration.UserAgent = "Admin self service UI"
 	configuration.Host = url.Host
 	configuration.Scheme = url.Scheme
+	cj, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+	}
 	if tlsConfig != nil {
 		configuration.HTTPClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsConfig,
 			},
+			Jar: cj,
 		}
 	}
 	configuration.Servers = []kratos.ServerConfiguration{

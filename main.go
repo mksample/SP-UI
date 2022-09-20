@@ -35,9 +35,10 @@ func main() {
 	}
 	log.Printf("KratosAdminURL: %s", opt.KratosAdminURL.String())
 	log.Printf("KratosPublicURL: %s", opt.KratosPublicURL.String())
-	log.Printf("KratosBrowserURL: %s", opt.KratosPublicURL.String())
+	log.Printf("KratosBrowserURL: %s", opt.KratosBrowserURL.String())
 	log.Printf("BaseURL: %s", opt.BaseURL.String())
 	log.Printf("Address: %s", opt.Address())
+	log.Printf("Port: %v", opt.Port)
 	log.Printf("Number of Cookie store keys: %d", len(opt.CookieStoreKeyPairs))
 
 	// Cetup Kratos API client
@@ -60,11 +61,9 @@ func main() {
 	r.Use(gh.RecoveryHandler(gh.PrintRecoveryStack(true)),
 		middleware.NoCacheMiddleware)
 
-	welcomeP := handlers.WelcomeParams{
-		SessionStore: session.SessionStore{Store: store},
-		FS:           fsys,
-	}
-	r.HandleFunc("/", welcomeP.Welcome)
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/welcome", http.StatusMovedPermanently)
+	})
 
 	regP := handlers.RegistrationParams{
 		FlowRedirectURL: opt.RegistrationURL(),
@@ -107,9 +106,18 @@ func main() {
 	// Following routes must be authenticated, so they get extra middleware
 	authP := middleware.KratosAuthParams{
 		SessionStore:      session.SessionStore{Store: store},
-		WhoAmIURL:         opt.WhoAmIURL(),
 		RedirectUnauthURL: MustURL(r.Get("login")).String(),
+		Redirect2FA:       opt.TwoFAURL(),
 	}
+
+	welcomeP := handlers.WelcomeParams{
+		SessionStore: session.SessionStore{Store: store},
+		FS:           fsys,
+	}
+	r.Handle("/welcome", Middleware(
+		http.HandlerFunc(welcomeP.Welcome),
+		authP.SetSession,
+	))
 
 	settingsP := handlers.SettingsParams{
 		FlowRedirectURL: opt.SettingsURL(),
@@ -135,8 +143,16 @@ func main() {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Println(err)
+		if opt.TLSCertPath != "" {
+			log.Printf("Serving TLS")
+			if err := srv.ListenAndServeTLS(opt.TLSCertPath, opt.TLSKeyPath); err != nil {
+				log.Println(err)
+			}
+		} else {
+			log.Printf("Serving")
+			if err := srv.ListenAndServe(); err != nil {
+				log.Println(err)
+			}
 		}
 	}()
 

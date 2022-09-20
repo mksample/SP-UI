@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"log"
 	"net/http"
 
@@ -23,28 +22,36 @@ type WelcomeParams struct {
 
 // Login handler displays the login screen
 func (wp WelcomeParams) Welcome(w http.ResponseWriter, r *http.Request) {
-
 	log.Printf("Calling Kratos API to create self service logout")
-	logoutResp, _, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(context.Background()).Cookie(session.SessionCookieName).Execute()
-	if err != nil {
-		log.Printf("Error creating self service logout flow: %v, redirecting to /", err)
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
-		return
+	var logoutURL string
+	logoutResp, rawResp, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
+	if rawResp != nil && rawResp.StatusCode == 401 {
+		logoutURL = ""
+	} else if rawResp == nil && err != nil {
+		log.Printf("Getting logout url: %v", err)
+	} else {
+		logoutURL = logoutResp.GetLogoutUrl()
 	}
 
-	sessionStr := wp.GetKratosSession(r).JsonPretty()
-	if sessionStr == "" {
-		sessionStr = `No valid Ory Session was found.
+	log.Printf("Getting session from session store")
+	sessionStr := `No valid Ory Session was found.
 		Please sign in to receive one.`
+	if wp.HasKratosSession(r) {
+		byteSessionStr, err := wp.GetKratosSession(r).MarshalJSON()
+		if err != nil {
+			log.Printf("Error marshaling session to json: %v", err)
+		} else {
+			sessionStr = string(byteSessionStr)
+		}
 	}
 
 	dataMap := map[string]interface{}{
 		"session":    sessionStr,
 		"hasSession": wp.HasKratosSession(r),
-		"logoutUrl":  logoutResp.LogoutUrl,
+		"logoutUrl":  logoutURL,
 		"fs":         wp.FS,
 	}
-	if err = GetTemplate(welcomePage).Render("layout", w, r, dataMap); err != nil {
+	if err := GetTemplate(welcomePage).Render("layout", w, r, dataMap); err != nil {
 		ErrorHandler(w, r, err)
 	}
 }

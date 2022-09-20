@@ -2,7 +2,7 @@
 <div class="input-button">
   <button
     class="button"
-    onclick="{{.Attributes.UiNodeInputAttributes.Onclick}}"
+    onclick="{{.Attributes.UiNodeInputAttributes.Onclick | safeJS}}"
     name="{{.Attributes.UiNodeInputAttributes.Name}}"
     type="{{.Attributes.UiNodeInputAttributes.Type}}"
     value="{{.Attributes.UiNodeInputAttributes.Value}}"

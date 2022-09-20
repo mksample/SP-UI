@@ -1,6 +1,6 @@
 {{define "ui"}}
 <form action="{{.Ui.Action}}" method="{{.Ui.Method}}">
-    {{template "messages" dict "Messages ".Ui.Messages "ClassName" ""}}
+    {{template "messages" dict "Messages" .Ui.Messages "ClassName" ""}}
     {{template "ui_nodes" dict "Nodes" .Ui.Nodes "Only" .Only}}
 </form>
 {{ end }}
