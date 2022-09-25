@@ -30,18 +30,18 @@ func (rp RecoveryParams) Recovery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Print("Calling Kratos API to get self service recovery")
-	recoveryResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRecoveryFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
+	recoveryResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRecoveryFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
-		log.Printf("Error getting self service recovery flow: %v, redirecting to /", err)
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		KratosErrorHandler(w, r, rawResp, err, rp.FlowRedirectURL)
 		return
 	}
 
 	dataMap := map[string]interface{}{
-		"resp": recoveryResp,
-		"fs":   rp.FS,
+		"title": "Recover account",
+		"resp":  recoveryResp,
+		"fs":    rp.FS,
 	}
 	if err = GetTemplate(recoveryPage).Render("layout", w, r, dataMap); err != nil {
-		ErrorHandler(w, r, err)
+		TemplateErrorHandler(w, r, err)
 	}
 }

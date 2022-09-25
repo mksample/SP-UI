@@ -30,18 +30,18 @@ func (sp SettingsParams) Settings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Print("Calling Kratos API to get self service settings")
-	settingsResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceSettingsFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
+	settingsResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceSettingsFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
-		log.Printf("Error getting self service settings flow: %v, redirecting to /welcome", err)
-		http.Redirect(w, r, "/welcome", http.StatusMovedPermanently)
+		KratosErrorHandler(w, r, rawResp, err, sp.FlowRedirectURL)
 		return
 	}
 
 	dataMap := map[string]interface{}{
-		"resp": settingsResp,
-		"fs":   sp.FS,
+		"title": "Account settings",
+		"resp":  settingsResp,
+		"fs":    sp.FS,
 	}
 	if err = GetTemplate(settingsPage).Render("layout", w, r, dataMap); err != nil {
-		ErrorHandler(w, r, err)
+		TemplateErrorHandler(w, r, err)
 	}
 }

@@ -32,18 +32,17 @@ func (rp RegistrationParams) Registration(w http.ResponseWriter, r *http.Request
 	log.Print("Calling Kratos API to get self service registration")
 	registrationResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceRegistrationFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
-		log.Printf("%v", rawResp)
-		log.Printf("Error getting self service registration flow: %v, redirecting to /", err)
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		KratosErrorHandler(w, r, rawResp, err, rp.FlowRedirectURL)
 		return
 	}
 
 	dataMap := map[string]interface{}{
+		"title":     "Create account",
 		"resp":      registrationResp,
 		"signInUrl": rp.LoginURL,
 		"fs":        rp.FS,
 	}
 	if err = GetTemplate(registrationPage).Render("layout", w, r, dataMap); err != nil {
-		ErrorHandler(w, r, err)
+		TemplateErrorHandler(w, r, err)
 	}
 }

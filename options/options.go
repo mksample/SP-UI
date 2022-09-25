@@ -194,9 +194,10 @@ func (o *Options) GetBaseURL() string {
 	return o.KratosBrowserURL.String()
 }
 
-func (o *Options) ErrorURL() string {
-	url := o.KratosBrowserURL
-	url.Path = "/error"
+// LoginURL returns the URL for the login page
+func (o *Options) LoginURL() string {
+	url := o.BaseURL
+	url.Path = "/login"
 	return url.String()
 }
 
@@ -245,13 +246,6 @@ func (o *Options) RecoveryFlowURL() string {
 func (o *Options) LogoutFlowURL() string {
 	url := o.KratosBrowserURL
 	url.Path = "/self-service/browser/flows/logout"
-	return url.String()
-}
-
-// LoginURL returns the URL to redirect to that shows the login page
-func (o *Options) LoginPageURL() string {
-	url := o.BaseURL
-	url.Path = "/login"
 	return url.String()
 }
 

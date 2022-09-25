@@ -30,18 +30,18 @@ func (vp VerificationParams) Verification(w http.ResponseWriter, r *http.Request
 	}
 
 	log.Print("Calling Kratos API to get self service verification")
-	verificationResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceVerificationFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
+	verificationResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceVerificationFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
-		log.Printf("Error getting self service verification flow: %v, redirecting to /", err)
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		KratosErrorHandler(w, r, rawResp, err, vp.FlowRedirectURL)
 		return
 	}
 
 	dataMap := map[string]interface{}{
-		"resp": verificationResp,
-		"fs":   vp.FS,
+		"title": "Verify account",
+		"resp":  verificationResp,
+		"fs":    vp.FS,
 	}
 	if err = GetTemplate(verificationPage).Render("layout", w, r, dataMap); err != nil {
-		ErrorHandler(w, r, err)
+		TemplateErrorHandler(w, r, err)
 	}
 }

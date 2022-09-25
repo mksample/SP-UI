@@ -27,7 +27,7 @@ func (wp WelcomeParams) Welcome(w http.ResponseWriter, r *http.Request) {
 	logoutResp, rawResp, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
 	if rawResp != nil && rawResp.StatusCode == 401 {
 		logoutURL = ""
-	} else if rawResp == nil && err != nil {
+	} else if err != nil {
 		log.Printf("Getting logout url: %v", err)
 	} else {
 		logoutURL = logoutResp.GetLogoutUrl()
@@ -46,12 +46,13 @@ func (wp WelcomeParams) Welcome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dataMap := map[string]interface{}{
+		"title":      "Welcome to Ory",
 		"session":    sessionStr,
 		"hasSession": wp.HasKratosSession(r),
 		"logoutUrl":  logoutURL,
 		"fs":         wp.FS,
 	}
 	if err := GetTemplate(welcomePage).Render("layout", w, r, dataMap); err != nil {
-		ErrorHandler(w, r, err)
+		TemplateErrorHandler(w, r, err)
 	}
 }
