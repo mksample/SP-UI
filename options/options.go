@@ -168,7 +168,7 @@ func (o *Options) Validate() error {
 	}
 
 	if !((o.TLSCertPath == "" && o.TLSKeyPath == "" && o.TLSCaPath == "") || (o.TLSCertPath != "" && o.TLSKeyPath != "" && o.TLSCaPath != "")) {
-		return fmt.Errorf("To enable HTTPS, provide 'tls-key-path', 'tls-cert-path' and 'tls-ca-path")
+		return fmt.Errorf("to enable HTTPS, provide 'tls-key-path', 'tls-cert-path' and 'tls-ca-path")
 	}
 
 	if !(len(o.CookieStoreKeyPairs) == 1 || len(o.CookieStoreKeyPairs)%2 == 0) {
@@ -191,7 +191,9 @@ func (o *Options) TwoFAURL() string {
 
 // GetBaseURL returns the URL to return to the base page
 func (o *Options) GetBaseURL() string {
-	return o.KratosBrowserURL.String()
+	url := o.BaseURL
+	url.Path = ""
+	return url.String()
 }
 
 // LoginURL returns the URL for the login page
