@@ -7,127 +7,101 @@ import (
 	"log"
 	"net/http"
 	"net/http/cookiejar"
-	"sync"
 
 	"github.com/davidoram/kratos-selfservice-ui-go/options"
 	kratos "github.com/ory/kratos-client-go"
 )
 
+// Kratos client instances
 var (
 	publicClientInstance *kratos.APIClient
+	adminClientInstance  *kratos.APIClient
 )
 
-func InitPublicClient(opt *options.Options) (*kratos.APIClient, error) {
-	var tlsConfig *tls.Config
-	var err error
-	if opt.TLSCertPath != "" {
-		tlsConfig, err = NewTLSConfig(opt.TLSCertPath, opt.TLSKeyPath, opt.TLSCaPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	url := opt.KratosPublicURL
-	configuration := kratos.NewConfiguration()
-	configuration.UserAgent = "Public self service UI"
-	configuration.Host = url.Host
-	configuration.Scheme = url.Scheme
-	cj, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
-	}
-	if tlsConfig != nil {
-		configuration.HTTPClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-			Jar: cj,
-		}
-	}
-	configuration.Servers = []kratos.ServerConfiguration{
-		{
-			URL: url.Path,
-		},
-	}
-	publicClientInstance = kratos.NewAPIClient(configuration)
-
-	return publicClientInstance, nil
-}
-
+// Gets the public client
 func PublicClient() *kratos.APIClient {
 	return publicClientInstance
 }
 
-var (
-	adminClientInstance *kratos.APIClient
-)
-
-func InitAdminClient(opt *options.Options) (*kratos.APIClient, error) {
-	var tlsConfig *tls.Config
-	var err error
-	if opt.TLSCertPath != "" {
-		tlsConfig, err = NewTLSConfig(opt.TLSCertPath, opt.TLSKeyPath, opt.TLSCaPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	url := opt.KratosAdminURL
-	configuration := kratos.NewConfiguration()
-	configuration.UserAgent = "Admin self service UI"
-	configuration.Host = url.Host
-	configuration.Scheme = url.Scheme
-	cj, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
-	}
-	if tlsConfig != nil {
-		configuration.HTTPClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-			Jar: cj,
-		}
-	}
-	configuration.Servers = []kratos.ServerConfiguration{
-		{
-			URL: url.Path,
-		},
-	}
-	adminClientInstance = kratos.NewAPIClient(configuration)
-
-	return adminClientInstance, nil
-}
-
+// Gets the admin client
 func AdminClient() *kratos.APIClient {
 	return adminClientInstance
 }
 
-var (
-	whoamiClientOnce     sync.Once
-	whoamiClientInstance *kratos.APIClient
-)
+// Initializes the public client
+func InitPublicClient(opt *options.Options) (*kratos.APIClient, error) {
+	cfg, err := NewKratosConfig(opt)
+	if err != nil {
+		return nil, err
+	}
 
+	publicClientInstance = kratos.NewAPIClient(cfg)
+
+	return publicClientInstance, nil
+}
+
+// Initializes the admin client
+func InitAdminClient(opt *options.Options) (*kratos.APIClient, error) {
+	cfg, err := NewKratosConfig(opt)
+	if err != nil {
+		return nil, err
+	}
+
+	adminClientInstance = kratos.NewAPIClient(cfg)
+
+	return adminClientInstance, nil
+}
+
+// Creates a kratos client config from options
+func NewKratosConfig(opt *options.Options) (cfg *kratos.Configuration, err error) {
+	url := opt.KratosPublicURL
+	cfg = kratos.NewConfiguration()
+
+	cfg.Host = url.Host
+	cfg.Scheme = url.Scheme
+	cfg.Servers = []kratos.ServerConfiguration{{URL: url.Path}}
+	cfg.UserAgent = "Public self service UI"
+	cj, err := cookiejar.New(nil) // TODO: don't know if this is actually necessary
+	if err != nil {
+		return nil, err
+	}
+	cfg.HTTPClient = &http.Client{Jar: cj}
+
+	if opt.TLSCertPath != "" {
+		tlsConfig, err := NewTLSConfig(opt.TLSCertPath, opt.TLSKeyPath, opt.TLSCaPath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.HTTPClient.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+	}
+
+	return cfg, nil
+}
+
+// Creates a TLS config from certificate/key paths
 func NewTLSConfig(clientCertFile, clientKeyFile, caCertFile string) (*tls.Config, error) {
-	tlsConfig := tls.Config{}
+	cfg := tls.Config{}
 
 	// Load client cert
 	cert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
 	if err != nil {
 		log.Printf("here")
-		return &tlsConfig, err
+		return &cfg, err
 	}
-	tlsConfig.Certificates = []tls.Certificate{cert}
+	cfg.Certificates = []tls.Certificate{cert}
 
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
 		log.Printf("no here")
-		return &tlsConfig, err
+		return &cfg, err
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
-	tlsConfig.RootCAs = caCertPool
+	cfg.RootCAs = caCertPool
 
-	tlsConfig.BuildNameToCertificate()
-	return &tlsConfig, err
+	cfg.BuildNameToCertificate()
+	return &cfg, err
 }
