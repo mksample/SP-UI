@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/gob"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"github.com/davidoram/kratos-selfservice-ui-go/session"
 
 	"github.com/benbjohnson/hashfs"
+	kratos "github.com/ory/kratos-client-go"
 
 	gh "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -41,7 +43,7 @@ func main() {
 	log.Printf("Port: %v", opt.Port)
 	log.Printf("Number of Cookie store keys: %d", len(opt.CookieStoreKeyPairs))
 
-	// Cetup Kratos API client
+	// Init API clients
 	if _, err := api_client.InitPublicClient(opt); err != nil {
 		log.Fatalf("Error initializing public API client failed with error: %v", err)
 	}
@@ -52,32 +54,30 @@ func main() {
 	// Setup sesssion store in cookies
 	var store = sessions.NewCookieStore(opt.CookieStoreKeyPairs...)
 
-	// Static assets are wrapped in a hash fs that allows for aggesive http caching
-	var fsys = hashfs.NewFS(staticFS)
+	// Register kratos session type with gob
+	gob.Register(kratos.Session{})
+	gob.Register(make(map[string]interface{}))
 
-	// Public Routes need no authentication
+	// Create router
 	r := mux.NewRouter()
 
-	r.Use(gh.RecoveryHandler(gh.PrintRecoveryStack(true)),
-		middleware.NoCacheMiddleware)
+	// Static assets are wrapped in a hash fs that allows for aggesive http caching
+	var fsys = hashfs.NewFS(staticFS)
+	r.PathPrefix("/static/").Handler(hashfs.FileServer(fsys))
 
+	// Public Routes
+	r.Use(gh.RecoveryHandler(gh.PrintRecoveryStack(true)), middleware.NoCacheMiddleware)
+
+	// Health/readiness probe endpoints
+	r.HandleFunc("/health/alive", handlers.Health)
+	r.HandleFunc("/health/ready", handlers.Health)
+
+	// Redirect from / to /welcome
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/welcome", http.StatusMovedPermanently)
 	})
 
-	regP := handlers.RegistrationParams{
-		FlowRedirectURL: opt.RegistrationURL(),
-		LoginURL:        opt.LoginPageURL(),
-		FS:              fsys,
-	}
-	r.HandleFunc("/registration", regP.Registration)
-
-	verificationP := handlers.VerificationParams{
-		FlowRedirectURL: opt.VerificationURL(),
-		FS:              fsys,
-	}
-	r.HandleFunc("/verification", verificationP.Verification)
-
+	// Login page
 	loginP := handlers.LoginParams{
 		FlowRedirectURL: opt.LoginFlowURL(),
 		RegistrationURL: opt.RegistrationURL(),
@@ -85,31 +85,51 @@ func main() {
 	}
 	r.HandleFunc("/login", loginP.Login).Name("login")
 
+	// Registration page
+	regP := handlers.RegistrationParams{
+		FlowRedirectURL: opt.RegistrationURL(),
+		LoginURL:        opt.LoginURL(),
+		FS:              fsys,
+	}
+	r.HandleFunc("/registration", regP.Registration)
+
+	// Verification page
+	verificationP := handlers.VerificationParams{
+		FlowRedirectURL: opt.VerificationURL(),
+		FS:              fsys,
+	}
+	r.HandleFunc("/verification", verificationP.Verification)
+
+	// Recovery page
 	recoverP := handlers.RecoveryParams{
 		FlowRedirectURL: opt.RecoveryFlowURL(),
 		FS:              fsys,
 	}
 	r.HandleFunc("/recovery", recoverP.Recovery)
 
-	errorP := handlers.ErrorParams{
+	// Error page
+	errorP := handlers.KratosErrorParams{
 		RedirectURL: opt.GetBaseURL(),
+		HomeURL:     opt.GetBaseURL(),
 		FS:          fsys,
 	}
 	r.HandleFunc("/error", errorP.Error)
-	handlers.InitErrorHandler(opt.ErrorURL())
 
-	r.HandleFunc("/health/alive", handlers.Health)
-	r.HandleFunc("/health/ready", handlers.Health)
+	// 404 route
+	pageNotFoundP := handlers.PageNotFoundParams{
+		HomeURL: opt.GetBaseURL(),
+		FS:      fsys,
+	}
+	r.NotFoundHandler = http.HandlerFunc(pageNotFoundP.PageNotFound)
 
-	r.PathPrefix("/static/").Handler(hashfs.FileServer(fsys))
-
-	// Following routes must be authenticated, so they get extra middleware
+	// Routes with authentication middleware
 	authP := middleware.KratosAuthParams{
 		SessionStore:      session.SessionStore{Store: store},
 		RedirectUnauthURL: MustURL(r.Get("login")).String(),
 		Redirect2FA:       opt.TwoFAURL(),
 	}
 
+	// Welcome page (authentication optional)
 	welcomeP := handlers.WelcomeParams{
 		SessionStore: session.SessionStore{Store: store},
 		FS:           fsys,
@@ -119,6 +139,7 @@ func main() {
 		authP.SetSession,
 	))
 
+	// Settings page (authentication required)
 	settingsP := handlers.SettingsParams{
 		FlowRedirectURL: opt.SettingsURL(),
 		FS:              fsys,
