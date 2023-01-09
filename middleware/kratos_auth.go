@@ -54,7 +54,10 @@ func (p KratosAuthParams) SetSession(next http.Handler) http.Handler {
 			log.Printf("2 factor authentication required, redirecting to %v", p.Redirect2FA)
 			http.Redirect(w, r, p.Redirect2FA, http.StatusPermanentRedirect)
 		} else if rawResp != nil && rawResp.StatusCode == 401 {
-			log.Printf("No session to set")
+			err = p.ClearKratosSession(w, r)
+			if err != nil {
+				log.Printf("Error clearing kratos session: %v", err)
+			}
 		} else if err != nil {
 			log.Printf("Error setting kratos session: %v", err)
 		} else {
