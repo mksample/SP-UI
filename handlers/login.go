@@ -31,18 +31,16 @@ func (lp LoginParams) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Calling Kratos API to create self service logout")
 	var logoutURL string
 	logoutResp, rawResp, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
 	if rawResp != nil && rawResp.StatusCode == 401 {
 		logoutURL = ""
 	} else if err != nil {
-		log.Printf("Getting logout url: %v", err)
+		log.Printf("Error getting logout url: %v", err)
 	} else {
 		logoutURL = logoutResp.GetLogoutUrl()
 	}
 
-	log.Print("Calling Kratos API to get self service login")
 	loginResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceLoginFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
 		KratosErrorHandler(w, r, rawResp, err, lp.FlowRedirectURL)

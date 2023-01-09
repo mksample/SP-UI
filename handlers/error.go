@@ -25,12 +25,10 @@ func (ep KratosErrorParams) Error(w http.ResponseWriter, r *http.Request) {
 	// Start the error flow with Kratos if required
 	flow := r.URL.Query().Get("flow")
 	if flow == "" {
-		log.Printf("No error was sent, redirecting to %s", ep.RedirectURL)
 		http.Redirect(w, r, ep.RedirectURL, http.StatusMovedPermanently)
 		return
 	}
 
-	log.Printf("Calling Kratos API to get self service error")
 	errorResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceError(r.Context()).Id(flow).Execute()
 	if err != nil {
 		log.Printf("Error getting self service error flow: %v, redirecting to %s", err, ep.RedirectURL)

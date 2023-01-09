@@ -26,7 +26,6 @@ const (
 
 // SaveKratosSession stores a kratos session in the session store.
 func (s SessionStore) SaveKratosSession(w http.ResponseWriter, r *http.Request, ks *client.Session) error {
-
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
 	session, err := s.Store.Get(r, SessionCookieName)
@@ -45,7 +44,6 @@ func (s SessionStore) SaveKratosSession(w http.ResponseWriter, r *http.Request, 
 
 // GetKratosSession returns a krato session from the session store.
 func (s SessionStore) GetKratosSession(r *http.Request) *client.Session {
-
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
 	session, err := s.Store.Get(r, SessionCookieName)
@@ -71,4 +69,20 @@ func (s SessionStore) HasKratosSession(r *http.Request) bool {
 		return true
 	}
 	return false
+}
+
+// ClearKratosSession clears any existing kratos session in the session store.
+func (s SessionStore) ClearKratosSession(w http.ResponseWriter, r *http.Request) error {
+	// Get a session. We're ignoring the error resulted from decoding an
+	// existing session: Get() always returns a session, even if empty.
+	session, err := s.Store.Get(r, SessionCookieName)
+	if err != nil {
+		log.Printf("Error decoding session, %v", err)
+		return err
+	}
+
+	// Clear the value stored in the session store
+	delete(session.Values, keyKratosSession)
+	session.Options.MaxAge = -1
+	return session.Save(r, w)
 }

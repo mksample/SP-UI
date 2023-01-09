@@ -47,9 +47,11 @@ type Options struct {
 	// TLSCertPath is an optional Path to certificate file.
 	// Should be set up together with TLSKeyPath and TLSCaPath to enable HTTPS.
 	TLSCertPath string
-	// TLSCertPath is an optional path to key file.
+
+	// TLSKeyPath is an optional path to key file.
 	// Should be set up together with TLSCertPath and TLSCaPAth to enable HTTPS.
 	TLSKeyPath string
+
 	// TLSCaPath is an option path to a certificate bundle.
 	// Should be set up together with TLSCertPath and TLSKeyPath to enable HTTPS.
 	TLSCaPath string

@@ -22,18 +22,16 @@ type WelcomeParams struct {
 
 // Login handler displays the login screen
 func (wp WelcomeParams) Welcome(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Calling Kratos API to create self service logout")
 	var logoutURL string
 	logoutResp, rawResp, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
 	if rawResp != nil && rawResp.StatusCode == 401 {
 		logoutURL = ""
 	} else if err != nil {
-		log.Printf("Getting logout url: %v", err)
+		log.Printf("Error getting logout url: %v", err)
 	} else {
 		logoutURL = logoutResp.GetLogoutUrl()
 	}
 
-	log.Printf("Getting session from session store")
 	sessionStr := `No valid Ory Session was found.
 		Please sign in to receive one.`
 	if wp.HasKratosSession(r) {
