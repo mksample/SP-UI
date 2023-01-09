@@ -47,11 +47,9 @@ type Options struct {
 	// TLSCertPath is an optional Path to certificate file.
 	// Should be set up together with TLSKeyPath and TLSCaPath to enable HTTPS.
 	TLSCertPath string
-
-	// TLSKeyPath is an optional path to key file.
+	// TLSCertPath is an optional path to key file.
 	// Should be set up together with TLSCertPath and TLSCaPAth to enable HTTPS.
 	TLSKeyPath string
-
 	// TLSCaPath is an option path to a certificate bundle.
 	// Should be set up together with TLSCertPath and TLSKeyPath to enable HTTPS.
 	TLSCaPath string
@@ -170,7 +168,7 @@ func (o *Options) Validate() error {
 	}
 
 	if !((o.TLSCertPath == "" && o.TLSKeyPath == "" && o.TLSCaPath == "") || (o.TLSCertPath != "" && o.TLSKeyPath != "" && o.TLSCaPath != "")) {
-		return fmt.Errorf("to enable HTTPS, provide 'tls-key-path', 'tls-cert-path' and 'tls-ca-path")
+		return fmt.Errorf("To enable HTTPS, provide 'tls-key-path', 'tls-cert-path' and 'tls-ca-path")
 	}
 
 	if !(len(o.CookieStoreKeyPairs) == 1 || len(o.CookieStoreKeyPairs)%2 == 0) {
@@ -193,15 +191,12 @@ func (o *Options) TwoFAURL() string {
 
 // GetBaseURL returns the URL to return to the base page
 func (o *Options) GetBaseURL() string {
-	url := o.BaseURL
-	url.Path = ""
-	return url.String()
+	return o.KratosBrowserURL.String()
 }
 
-// LoginURL returns the URL for the login page
-func (o *Options) LoginURL() string {
-	url := o.BaseURL
-	url.Path = "/login"
+func (o *Options) ErrorURL() string {
+	url := o.KratosBrowserURL
+	url.Path = "/error"
 	return url.String()
 }
 
@@ -250,6 +245,13 @@ func (o *Options) RecoveryFlowURL() string {
 func (o *Options) LogoutFlowURL() string {
 	url := o.KratosBrowserURL
 	url.Path = "/self-service/browser/flows/logout"
+	return url.String()
+}
+
+// LoginURL returns the URL to redirect to that shows the login page
+func (o *Options) LoginPageURL() string {
+	url := o.BaseURL
+	url.Path = "/login"
 	return url.String()
 }
 

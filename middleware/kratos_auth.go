@@ -35,33 +35,23 @@ func (p KratosAuthParams) KratoAuthMiddleware(next http.Handler) http.Handler {
 			log.Printf("No kratos session found: %v, redirecting to %v", err, p.RedirectUnauthURL)
 			http.Redirect(w, r, p.RedirectUnauthURL, http.StatusPermanentRedirect)
 		} else {
-			err = p.SaveKratosSession(w, r, session)
-			if err != nil {
-				log.Printf("Error saving kratos session: %v", err)
-			}
+			p.SaveKratosSession(w, r, session)
 		}
 
 		next.ServeHTTP(w, r)
 	})
 }
 
-// SetSession attempts to set the session for the request. If the user is not authenicated no session is set.
-// Redirects to MFA login if required.
 func (p KratosAuthParams) SetSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, rawResp, err := api_client.PublicClient().V0alpha2Api.ToSession(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
 		if rawResp != nil && rawResp.StatusCode == code2FA {
 			log.Printf("2 factor authentication required, redirecting to %v", p.Redirect2FA)
 			http.Redirect(w, r, p.Redirect2FA, http.StatusPermanentRedirect)
-		} else if rawResp != nil && rawResp.StatusCode == 401 {
-			log.Printf("No session to set")
 		} else if err != nil {
-			log.Printf("Error setting kratos session: %v", err)
+			log.Printf("Setting session: %v", err)
 		} else {
-			err = p.SaveKratosSession(w, r, session)
-			if err != nil {
-				log.Printf("Error saving kratos session: %v", err)
-			}
+			p.SaveKratosSession(w, r, session)
 		}
 
 		next.ServeHTTP(w, r)

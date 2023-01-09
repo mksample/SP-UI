@@ -145,25 +145,22 @@ func init() {
 	}
 }
 
-// TextSecrets is a struct used for passing Lookup Secrets to a template.
-// Ref: https://www.ory.sh/docs/kratos/mfa/lookup-secrets
+// TextSecrets is a struct for passing UiNodeText context secrets to a template
 type textSecret struct {
 	Id   int64
 	Text string
 }
 
-// Marshals data from a text secret map.
+// Marshals data from a text secret map
 func (ts *textSecret) marshal(m map[string]interface{}) {
 	ts.Id = int64(m["id"].(float64))
 	ts.Text = m["text"].(string)
 }
 
-// Default template functions, added to all templates.
+// Default template functions, added to all templates
 func globalFuncMap() template.FuncMap {
 
 	return template.FuncMap{
-		// Functions for returning safe HTML elements (URL, HTML attributes, JavaScript)
-		// See https://pkg.go.dev/html/template#hdr-Contexts for more information
 		"safeURL": func(s *string) template.URL {
 			if s == nil {
 				return ""
@@ -182,11 +179,9 @@ func globalFuncMap() template.FuncMap {
 			}
 			return template.JS(*s)
 		},
-
-		// Returns a hashed path of the asset being used
 		"assetPath": func(fs hashfs.FS, name string) string {
 			if strings.HasPrefix(name, "/") {
-				log.Printf("assetPath: called with name '%s', should not start with '/'", name)
+				log.Printf("Error assetPath called with name: '%s' should not start with '/'", name)
 			}
 			path := fs.HashName(name)
 			if strings.HasPrefix(path, "/") {
@@ -194,14 +189,10 @@ func globalFuncMap() template.FuncMap {
 			}
 			return fmt.Sprintf("/%s", path)
 		},
-
-		// Attempts to parse UI node text context into text secrets suitable for templates
-		// See the type textSecret above for field names
 		"getTextSecrets": func(node kratos.UiNode) []textSecret {
+			ts := []textSecret{}
 			secrets := node.Attributes.UiNodeTextAttributes.Text.Context["secrets"]
 			v := reflect.ValueOf(secrets)
-			ts := []textSecret{}
-
 			if v.Kind() == reflect.Slice {
 				for i := 0; i < v.Len(); i++ {
 					m := v.Index(i).Interface().(map[string]interface{})
@@ -213,37 +204,32 @@ func globalFuncMap() template.FuncMap {
 			}
 			return nil
 		},
-
-		// Combines x number of keys and values into a map for template access
-		//
-		// Example: {{template "xyz" dict "Foo" "a" "Bar" .SomeValue}}
-		// passes .Foo = "a" and .Bar = .SomeValue to the template xyz
 		"dict": func(values ...interface{}) map[string]interface{} {
 			if len(values)%2 != 0 {
-				log.Printf("dict: uneven number of keys and values for %v", values)
+				log.Printf("invalid dict call")
 				return nil
 			}
 			dict := make(map[string]interface{}, len(values)/2)
 			for i := 0; i < len(values); i += 2 {
 				key, ok := values[i].(string)
 				if !ok {
-					log.Printf("dict: could not convert %v to string ", values[i])
+					log.Printf("invalid dict call")
 					return nil
 				}
 				dict[key] = values[i+1]
 			}
 			return dict
 		},
-
-		// Returns the type of partial to display for a node
 		"toUiNodePartial": func(node kratos.UiNode) string {
-			if _, ok := node.GetTypeOk(); ok {
-				switch node.Type {
-				case "a":
+			if _, ok := node.GetTypeOk(); !ok {
+				log.Printf("Error toUiNodePartial called with unset node type")
+			} else {
+				if node.Type == "a" {
 					return "ui_node_anchor"
-				case "img":
+				} else if node.Type == "img" {
 					return "ui_node_image"
-				case "input":
+				} else if node.Type == "input" {
+
 					switch node.Attributes.UiNodeInputAttributes.Type {
 					case "hidden":
 						return "ui_node_input_hidden"
@@ -253,50 +239,46 @@ func globalFuncMap() template.FuncMap {
 						return "ui_node_input_button"
 					case "checkbox":
 						return "ui_node_input_checkbox"
+					default:
+						return "ui_node_input_default"
 					}
-				case "script":
+				} else if node.Type == "script" {
 					return "ui_node_script"
-				case "text":
+				} else if node.Type == "text" {
 					return "ui_node_text"
 				}
+				return "ui_node_input_default"
 			}
 			return "ui_node_input_default"
 		},
-
-		// Returns a node label based on the type of node passed
 		"getNodeLabel": func(node kratos.UiNode) string {
-			if _, ok := node.GetTypeOk(); ok {
-				switch node.Type {
-				case "a":
+			if _, ok := node.GetTypeOk(); !ok {
+				log.Printf("Error getNodeLabel called with unset node type")
+			} else {
+				if node.Type == "a" {
 					return node.Attributes.UiNodeAnchorAttributes.Title.Text
-				case "img":
+				} else if node.Type == "img" {
 					return node.Meta.Label.Text
-				case "input":
+				} else if node.Type == "input" {
 					if node.Attributes.UiNodeInputAttributes.HasLabel() {
 						return node.Attributes.UiNodeInputAttributes.Label.Text
 					}
 				}
 			}
-
-			// If no type given or no input label attempt to get from meta
 			if node.Meta.HasLabel() {
 				return node.Meta.Label.Text
 			} else {
 				return ""
 			}
 		},
-
-		// Returns nodes with only the matching group type(s). If groups is blank all nodes are returned
-		// Groups are specified with the format "groupa,groupb"
 		"onlyNodesGroups": func(nodes []kratos.UiNode, groups string) []kratos.UiNode {
 			var filtered []kratos.UiNode
-			filterGroups := strings.Split(groups, ",")
-			if len(filterGroups) == 0 {
+			sGroups := strings.Split(groups, ",")
+			if len(sGroups) == 0 {
 				return nodes
 			}
-
 			for _, n := range nodes {
-				for _, fg := range filterGroups {
+				for _, fg := range sGroups {
 					if n.Group == fg {
 						filtered = append(filtered, n)
 						break

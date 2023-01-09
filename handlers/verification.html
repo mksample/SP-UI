@@ -3,6 +3,8 @@
   <div class="card">
     <h2 class="typography-h2 card-title">Verify your account</h2>
 
+    {{template "messages" dict "Messages" .resp.Ui.Messages "ClassName" "global"}}
+
     {{template "ui" dict "Ui" .resp.Ui "Only" "all"}}
   </div>
   <div class="card">
