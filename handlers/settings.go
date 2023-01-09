@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/benbjohnson/hashfs"
@@ -23,22 +24,24 @@ func (sp SettingsParams) Settings(w http.ResponseWriter, r *http.Request) {
 	// Start the settings flow with Kratos if required
 	flow := r.URL.Query().Get("flow")
 	if flow == "" {
+		log.Printf("No flow ID found in URL, initializing login flow, redirect to %s", sp.FlowRedirectURL)
 		http.Redirect(w, r, sp.FlowRedirectURL, http.StatusMovedPermanently)
 		return
 	}
 
-	settingsResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceSettingsFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
+	log.Print("Calling Kratos API to get self service settings")
+	settingsResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceSettingsFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
-		KratosErrorHandler(w, r, rawResp, err, sp.FlowRedirectURL)
+		log.Printf("Error getting self service settings flow: %v, redirecting to /welcome", err)
+		http.Redirect(w, r, "/welcome", http.StatusMovedPermanently)
 		return
 	}
 
 	dataMap := map[string]interface{}{
-		"title": "Account settings",
-		"resp":  settingsResp,
-		"fs":    sp.FS,
+		"resp": settingsResp,
+		"fs":   sp.FS,
 	}
 	if err = GetTemplate(settingsPage).Render("layout", w, r, dataMap); err != nil {
-		TemplateErrorHandler(w, r, err)
+		ErrorHandler(w, r, err)
 	}
 }
