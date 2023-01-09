@@ -31,33 +31,31 @@ func (lp LoginParams) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Calling Kratos API to create self service logout")
 	var logoutURL string
 	logoutResp, rawResp, err := api_client.PublicClient().V0alpha2Api.CreateSelfServiceLogoutFlowUrlForBrowsers(r.Context()).Cookie(r.Header.Get("Cookie")).Execute()
 	if rawResp != nil && rawResp.StatusCode == 401 {
 		logoutURL = ""
-	} else if rawResp == nil && err != nil {
-		log.Printf("Getting logout url: %v", err)
+	} else if err != nil {
+		log.Printf("Error getting logout url: %v", err)
 	} else {
 		logoutURL = logoutResp.GetLogoutUrl()
 	}
 
-	log.Print("Calling Kratos API to get self service login")
-	loginResp, _, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceLoginFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
+	loginResp, rawResp, err := api_client.PublicClient().V0alpha2Api.GetSelfServiceLoginFlow(r.Context()).Id(flow).Cookie(r.Header.Get("Cookie")).Execute()
 	if err != nil {
-		log.Printf("Error getting self service login flow: %v, redirecting to /", err)
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		KratosErrorHandler(w, r, rawResp, err, lp.FlowRedirectURL)
 		return
 	}
 
 	dataMap := map[string]interface{}{
+		"title":           "Sign in",
 		"resp":            loginResp,
 		"isAuthenticated": *loginResp.Refresh || loginResp.RequestedAal == kratos.AUTHENTICATORASSURANCELEVEL_AAL2.Ptr(),
-		"signUpUrl":       lp.RegistrationURL,
-		"logoutUrl":       logoutURL,
+		"registrationURL": lp.RegistrationURL,
+		"logoutURL":       logoutURL,
 		"fs":              lp.FS,
 	}
 	if err = GetTemplate(loginPage).Render("layout", w, r, dataMap); err != nil {
-		ErrorHandler(w, r, err)
+		TemplateErrorHandler(w, r, err)
 	}
 }
